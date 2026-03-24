@@ -40,13 +40,14 @@ a {
   border: 0;
 }
 
+
 .jobs-page {
   min-height: 100dvh;
-  padding: 1.5rem 1rem 2.5rem;
+
 }
 
 .jobs-shell {
-  width: min(100%, 1060px);
+  /* width: min(100%, 1060px); */
   margin: 0 auto;
   background: var(--background);
 }

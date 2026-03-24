@@ -1,5 +1,6 @@
 
 import * as prismic from "@prismicio/client";
+import Link from "next/link";
 import JobCard, { type JobOffer } from "@/components/ui/JobCard";
 import JobsHeader from "@/components/ui/JobsHeader";
 import { createClient } from "@/prismicio";
@@ -57,10 +58,26 @@ function mapWebsiteToOffer(website: OffreDocumentLike): JobOffer {
   };
 }
 
-export default async function HomepagePage() {
+type ListePageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function HomepagePage({ searchParams }: ListePageProps) {
+  const { page } = await searchParams;
+  const requestedPage = Number.parseInt(page ?? "1", 10);
+  const safeRequestedPage = Number.isNaN(requestedPage) || requestedPage < 1 ? 1 : requestedPage;
+  const pageSize = 6;
+
   const client = createClient();
   const websites = await client.getAllByType("offre");
-  const offers = (websites as unknown as OffreDocumentLike[]).slice(0, 6).map(mapWebsiteToOffer);
+  const sortedOffers = (websites as unknown as OffreDocumentLike[])
+    .map(mapWebsiteToOffer)
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  const totalPages = Math.max(1, Math.ceil(sortedOffers.length / pageSize));
+  const currentPage = Math.min(safeRequestedPage, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const offers = sortedOffers.slice(startIndex, startIndex + pageSize);
 
   return (
     <main className="jobs-page">
@@ -71,11 +88,35 @@ export default async function HomepagePage() {
           <h1 className="jobs-main-title">Voir toutes les offres</h1>
 
           {offers.length > 0 ? (
-            <div className="jobs-grid">
-              {offers.map((offer) => (
-                <JobCard key={offer.uid} offer={offer} />
-              ))}
-            </div>
+            <>
+              <div className="jobs-grid">
+                {offers.map((offer) => (
+                  <JobCard key={offer.uid} offer={offer} />
+                ))}
+              </div>
+
+              <div className="jobs-pagination" aria-label="Pagination des offres">
+                {currentPage > 1 ? (
+                  <Link href={`/liste?page=${currentPage - 1}`} className="jobs-button jobs-button--small">
+                    Precedent
+                  </Link>
+                ) : (
+                  <span className="jobs-button jobs-button--small jobs-button--disabled">Precedent</span>
+                )}
+
+                <span className="jobs-pagination__status">
+                  Page {currentPage} / {totalPages}
+                </span>
+
+                {currentPage < totalPages ? (
+                  <Link href={`/liste?page=${currentPage + 1}`} className="jobs-button jobs-button--small">
+                    Suivant
+                  </Link>
+                ) : (
+                  <span className="jobs-button jobs-button--small jobs-button--disabled">Suivant</span>
+                )}
+              </div>
+            </>
           ) : (
             <p className="jobs-empty">Aucune offre disponible pour le moment.</p>
           )}

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import JobCard, { type JobOffer } from "@/components/ui/JobCard";
 import JobsHeader from "@/components/ui/JobsHeader";
+
 import { createClient } from "@/prismicio";
  
 type OffreDocumentLike = {
