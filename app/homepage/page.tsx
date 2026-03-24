@@ -2,22 +2,50 @@
 import * as prismic from "@prismicio/client";
 import Image from "next/image";
 import Link from "next/link";
-import JobCard from "@/components/ui/JobCard";
+import JobCard, { type JobOffer } from "@/components/ui/JobCard";
 import JobsHeader from "@/components/ui/JobsHeader";
 import { createClient } from "@/prismicio";
-import type { OffreDocument } from "@/prismicio-types";
+ 
+type OffreDocumentLike = {
+  uid: string | null;
+  id: string;
+  tags?: string[];
+  first_publication_date: string;
+  data: {
+    title?: string | null;
+    date?: string | null;
+    description?: unknown;
+    tag?: unknown;
+  };
+};
 
-function mapWebsiteToOffer(website: OffreDocument) {
-  const description = prismic.asText(website.data.description) ?? "";
+function parseTagField(tagField: unknown): string[] {
+  if (Array.isArray(tagField)) {
+    return [...new Set(tagField.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean))];
+  }
+
+  if (typeof tagField === "string") {
+    return [...new Set(tagField
+      .split(/[;,|\n]/)
+      .map((tag) => tag.trim().toLowerCase())
+      .filter(Boolean))];
+  }
+
+  const asText = prismic.asText(tagField as prismic.RichTextField) ?? "";
+  return [...new Set(asText
+    .split(/[;,|\n]/)
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean))];
+}
+
+function mapWebsiteToOffer(website: OffreDocumentLike): JobOffer {
+  const description = prismic.asText(website.data.description as prismic.RichTextField) ?? "";
   const firstLine = description
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)[0];
-
-  const tags = (website.data.tag ?? "")
-    .split(/[;,|\n]/)
-    .map((tag) => tag.trim().toLowerCase())
-    .filter(Boolean);
+  const documentTags = parseTagField(website.tags);
+  const legacyTags = parseTagField(website.data.tag);
 
   return {
     uid: website.uid || website.id,
@@ -25,7 +53,7 @@ function mapWebsiteToOffer(website: OffreDocument) {
     title: website.data.title?.trim() || "Offre",
     excerpt: firstLine || "Description à venir.",
     content: description ? [description] : ["Description à venir."],
-    tags,
+    tags: documentTags.length > 0 ? documentTags : legacyTags,
     publishedAt: website.data.date || website.first_publication_date,
     applicationsCount: 0,
   };
@@ -34,7 +62,10 @@ function mapWebsiteToOffer(website: OffreDocument) {
 export default async function HomepagePage() {
   const client = createClient();
   const websites = await client.getAllByType("offre");
-  const offers = (websites as OffreDocument[]).slice(0, 6).map(mapWebsiteToOffer);
+  const offers = (websites as unknown as OffreDocumentLike[])
+    .map(mapWebsiteToOffer)
+    .filter((offer) => offer.tags.some((tag) => tag.toLowerCase() === "firstpage"))
+    .slice(0, 6);
 
   return (
     <main className="jobs-page">

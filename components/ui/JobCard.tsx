@@ -1,6 +1,16 @@
 import Link from "next/link";
-import type { JobOffer } from "@/libs/jobs";
-import { toTagSlug } from "@/libs/jobs";
+
+export type JobOffer = {
+  uid: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string[];
+  tags: string[];
+  publishedAt: string;
+  applicationsCount: number;
+  isSaved?: boolean;
+};
 
 type JobCardProps = {
   offer: JobOffer;
@@ -14,6 +24,14 @@ function formatDate(value: string) {
   }
 
   return new Intl.DateTimeFormat("fr-FR").format(date);
+}
+
+function toTagSlug(tag: string): string {
+  return tag
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 }
 
 export default function JobCard({ offer }: JobCardProps) {
@@ -39,8 +57,9 @@ export default function JobCard({ offer }: JobCardProps) {
           ))}
         </div>
       )}
-
-      <p className="job-card__excerpt">{offer.excerpt || "Description à venir."}</p>
+      {/* bride a 20 caracteres */}
+      <p className="job-card__excerpt">{offer.excerpt.length > 20 ? offer.excerpt.slice(0, 20) + "..." : offer.excerpt}</p>
+      {/* <p  className="job-card__excerpt">{offer.excerpt || "Description à venir."}</p> */}
     </article>
   );
 }
