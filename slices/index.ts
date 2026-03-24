@@ -3,6 +3,6 @@
 import dynamic from "next/dynamic";
 
 export const components = {
-  alternate_grid: dynamic(() => import("./AlternateGrid")),
+  // alternate_grid: dynamic(() => import("./AlternateGrid")),
   offre_emploie: dynamic(() => import("./OffreEmploie")),
 };

@@ -1,12 +1,12 @@
-import { sendContactForm } from "@/actions/sendContactForm";
+import { sendContact } from "@/actions/sendContact";
 import Form from "next/form";
 
 export default function ContactForm() {
   return (
-    <Form action={sendContactForm}>
+    <Form action={sendContact}>
       <input name="email" type="email" />
       <textarea name="message"></textarea>
-      <button type="submit">Create Post</button>
+      <button type="submit">Send Contact</button>
     </Form>
   );
 }
