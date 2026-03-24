@@ -41,15 +41,6 @@
             "label": "tag",
             "placeholder": ""
           }
-        },
-        "pinned": {
-          "type": "Boolean",
-          "config": {
-            "label": "pinned",
-            "placeholder_false": "false",
-            "placeholder_true": "true",
-            "default_value": false
-          }
         }
       },
       "items": {}

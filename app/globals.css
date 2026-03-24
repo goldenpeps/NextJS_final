@@ -212,6 +212,28 @@ a {
   padding-top: 1.7rem;
 }
 
+.jobs-empty {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.jobs-pagination {
+  margin-top: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.jobs-pagination__status {
+  min-width: 115px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .jobs-button {
   border: 1px solid var(--primary-accent);
   background: var(--primary-accent);
@@ -226,6 +248,11 @@ a {
   display: inline-block;
   background: transparent;
   color: var(--primary-accent);
+}
+
+.jobs-button--disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .jobs-section--single .jobs-main-title {

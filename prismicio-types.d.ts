@@ -181,18 +181,6 @@ interface OffreDocumentData {
    * - **Documentation**: https://prismic.io/docs/fields/text
    */
   tag: prismic.KeyTextField;
-
-  /**
-   * pinned field in *offre*
-   *
-   * - **Field Type**: Boolean
-   * - **Placeholder**: *None*
-   * - **Default Value**: false
-   * - **API ID Path**: offre.pinned
-   * - **Tab**: Main
-   * - **Documentation**: https://prismic.io/docs/fields/boolean
-   */
-  pinned: prismic.BooleanField;
 }
 
 /**
@@ -354,17 +342,6 @@ export interface OffreEmploieSliceDefaultPrimary {
    * - **Documentation**: https://prismic.io/docs/fields/embed
    */
   tag: prismic.EmbedField;
-
-  /**
-   * pinned field in *OffreEmploie → Default → Primary*
-   *
-   * - **Field Type**: Boolean
-   * - **Placeholder**: *None*
-   * - **Default Value**: false
-   * - **API ID Path**: offre_emploie.default.primary.pinned
-   * - **Documentation**: https://prismic.io/docs/fields/boolean
-   */
-  pinned: prismic.BooleanField;
 }
 
 /**

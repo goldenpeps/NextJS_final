@@ -48,10 +48,6 @@
 					"version": "1.0"
 				},
 				"__TYPE__": "EmbedContent"
-			},
-			"pinned": {
-				"__TYPE__": "BooleanContent",
-				"value": true
 			}
 		},
 		"items": []

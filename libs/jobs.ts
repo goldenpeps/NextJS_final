@@ -1,17 +1,6 @@
 import * as prismic from "@prismicio/client";
 import { createClient } from "@/prismicio";
 
-type PrismicRichTextBlock = {
-  type?: string;
-  text?: string;
-};
-
-type PrismicEmbedFieldValue = {
-  html?: string;
-  title?: string;
-  provider_name?: string;
-};
-
 export type JobOffer = {
   uid: string;
   slug: string;
@@ -24,12 +13,32 @@ export type JobOffer = {
   isSaved?: boolean;
 };
 
+export function toTagSlug(tag: string): string {
+  return tag
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+type OffreDocumentLike = {
+  uid: string | null;
+  id: string;
+  first_publication_date: string;
+  data: {
+    title?: string | null;
+    date?: string | null;
+    description?: unknown;
+    tag?: string | null;
+  };
+};
+
 type DescriptionDocumentLike = {
   uid: string | null;
   id: string;
   first_publication_date: string;
   data: {
-    slices: Array<{
+    slices?: Array<{
       slice_type: string;
       primary?: {
         title?: string | null;
@@ -42,58 +51,58 @@ type DescriptionDocumentLike = {
   };
 };
 
-function stripHtml(input: string) {
-  return input.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 function parseTagField(tagField: unknown): string[] {
-  const embed = tagField as PrismicEmbedFieldValue | null | undefined;
+  if (typeof tagField === "string") {
+    return [...new Set(tagField
+      .split(/[;,|\n]/)
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean))];
+  }
 
-  if (!embed || typeof embed !== "object") {
+  const asText = prismic.asText(tagField as prismic.RichTextField) ?? "";
+  if (!asText.trim()) {
     return [];
   }
 
-  const candidates = [
-    embed.title,
-    embed.provider_name,
-    embed.html ? stripHtml(embed.html) : undefined,
-  ]
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .join(" ");
-
-  if (!candidates) {
-    return [];
-  }
-
-  return [...new Set(candidates
+  return [...new Set(asText
     .split(/[;,|\n]/)
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean))];
 }
 
-function parseDescriptionField(descriptionField: unknown): string[] {
-  const blocks = (descriptionField as PrismicRichTextBlock[] | undefined) ?? [];
+function mapPrismicOffreDocument(document: OffreDocumentLike): JobOffer {
+  const data = document.data ?? {};
+  const content = parseDescriptionField(data.description);
+  const uid = document.uid || document.id;
 
-  const paragraphs = blocks
-    .filter((block) => block && typeof block === "object")
-    .map((block) => ({ type: block.type ?? "", text: block.text?.trim() ?? "" }))
-    .filter((block) =>
-      ["paragraph", "preformatted", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6"].includes(block.type) &&
-      block.text.length > 0,
-    )
-    .map((block) => block.text);
-
-  if (paragraphs.length > 0) {
-    return paragraphs;
-  }
-
-  const text = prismic.asText(descriptionField as prismic.RichTextField) ?? "";
-  return text ? [text] : [];
+  return {
+    uid,
+    slug: uid,
+    title: data.title?.trim() || "Offre",
+    excerpt: content[0] || "",
+    content: content.length > 0 ? content : ["Description non renseignee."],
+    tags: parseTagField(data.tag),
+    publishedAt: data.date || document.first_publication_date,
+    applicationsCount: 0,
+    isSaved: false,
+  };
 }
 
-function mapPrismicOffer(
+function parseDescriptionField(descriptionField: unknown): string[] {
+  const text = prismic.asText(descriptionField as prismic.RichTextField) ?? "";
+  if (!text.trim()) {
+    return [];
+  }
+
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function mapPrismicDescriptionSlice(
   document: DescriptionDocumentLike,
-  slice: DescriptionDocumentLike["data"]["slices"][number],
+  slice: NonNullable<DescriptionDocumentLike["data"]["slices"]>[number],
   index: number,
 ): JobOffer {
   const primary = slice.primary ?? {};
@@ -102,7 +111,8 @@ function mapPrismicOffer(
   const publishedAt = primary.date || document.first_publication_date;
   const tags = parseTagField(primary.tag);
   const documentUid = document.uid || document.id;
-  const isSingleSlice = document.data.slices.length === 1;
+  const slices = document.data.slices || [];
+  const isSingleSlice = slices.length === 1;
   const uid = isSingleSlice ? documentUid : `${documentUid}-${index + 1}`;
 
   return {
@@ -118,23 +128,37 @@ function mapPrismicOffer(
   };
 }
 
-async function fetchOffersFromPrismic(): Promise<JobOffer[]> {
-  const client = createClient();
-  const docs = await client.getAllByType("description");
+async function fetchOffersFromOffreType(client: ReturnType<typeof createClient>): Promise<JobOffer[]> {
+  const docs = await client.getAllByType("offre", {
+    orderings: [{ field: "document.first_publication_date", direction: "desc" }],
+  });
 
-  const offers = (docs as unknown as DescriptionDocumentLike[])
+  return (docs as unknown as OffreDocumentLike[]).map(mapPrismicOffreDocument);
+}
+
+async function fetchOffersFromDescriptionType(client: ReturnType<typeof createClient>): Promise<JobOffer[]> {
+  const docs = await client.getAllByType("description", {
+    orderings: [{ field: "document.first_publication_date", direction: "desc" }],
+  });
+
+  return (docs as unknown as DescriptionDocumentLike[])
     .flatMap((document) =>
       (document.data.slices || [])
         .filter((slice) => slice.slice_type === "offre_emploie")
-        .map((slice, index) => mapPrismicOffer(document, slice, index)),
+        .map((slice, index) => mapPrismicDescriptionSlice(document, slice, index)),
     )
-    .sort((a, b) => {
-      const aTime = new Date(a.publishedAt).getTime();
-      const bTime = new Date(b.publishedAt).getTime();
-      return bTime - aTime;
-    });
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+}
 
-  return offers;
+async function fetchOffersFromPrismic(): Promise<JobOffer[]> {
+  const client = createClient();
+
+  const offersFromOffreType = await fetchOffersFromOffreType(client).catch(() => []);
+  if (offersFromOffreType.length > 0) {
+    return offersFromOffreType;
+  }
+
+  return fetchOffersFromDescriptionType(client).catch(() => []);
 }
 
 export async function getAllOffers(): Promise<JobOffer[]> {
@@ -159,17 +183,24 @@ export async function getOfferByUid(uid: string): Promise<JobOffer | null> {
 
 export async function getOffersByTag(tag: string): Promise<JobOffer[]> {
   const loweredTag = tag.toLowerCase();
+  const slugTag = toTagSlug(tag);
   const offers = await getAllOffers();
 
   return offers.filter((offer) =>
-    offer.tags.some((offerTag) => offerTag.toLowerCase() === loweredTag),
+    offer.tags.some((offerTag) => {
+      const normalizedTag = offerTag.toLowerCase();
+
+      return normalizedTag === loweredTag || toTagSlug(normalizedTag) === slugTag;
+    }),
   );
 }
 
 export async function getAllTags(): Promise<string[]> {
   const offers = await getAllOffers();
 
-  return [...new Set(offers.flatMap((offer) => offer.tags))];
+  return [...new Set(offers.flatMap((offer) => offer.tags))].sort((a, b) =>
+    a.localeCompare(b, "fr", { sensitivity: "base" }),
+  );
 }
 
 export async function getSavedOffers(): Promise<JobOffer[]> {
