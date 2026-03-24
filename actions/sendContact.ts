@@ -8,6 +8,5 @@ export async function sendContact(formData: FormData) {
     throw new Error("Email et message sont requis.");
   }
 
-  // Placeholder: brancher ici votre envoi d'email/API.
   console.log("Contact envoye", { email, message });
 }
