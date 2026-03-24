@@ -1,72 +1,33 @@
 
-import * as prismic from "@prismicio/client";
 import Image from "next/image";
 import Link from "next/link";
 import JobCard, { type JobOffer } from "@/components/ui/JobCard";
+import * as prismic from "@prismicio/client";
 import JobsHeader from "@/components/ui/JobsHeader";
-
 import { createClient } from "@/prismicio";
  
-type OffreDocumentLike = {
-  uid: string | null;
-  id: string;
-  tags?: string[];
-  first_publication_date: string;
-  data: {
-    title?: string | null;
-    date?: string | null;
-    description?: unknown;
-    tag?: unknown;
-  };
-};
-
-function parseTagField(tagField: unknown): string[] {
-  if (Array.isArray(tagField)) {
-    return [...new Set(tagField.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean))];
-  }
-
-  if (typeof tagField === "string") {
-    return [...new Set(tagField
-      .split(/[;,|\n]/)
-      .map((tag) => tag.trim().toLowerCase())
-      .filter(Boolean))];
-  }
-
-  const asText = prismic.asText(tagField as prismic.RichTextField) ?? "";
-  return [...new Set(asText
-    .split(/[;,|\n]/)
-    .map((tag) => tag.trim().toLowerCase())
-    .filter(Boolean))];
-}
-
-function mapWebsiteToOffer(website: OffreDocumentLike): JobOffer {
-  const description = prismic.asText(website.data.description as prismic.RichTextField) ?? "";
-  const firstLine = description
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)[0];
-  const documentTags = parseTagField(website.tags);
-  const legacyTags = parseTagField(website.data.tag);
-
-  return {
-    uid: website.uid || website.id,
-    slug: website.uid || website.id,
-    title: website.data.title?.trim() || "Offre",
-    excerpt: firstLine || "Description à venir.",
-    content: description ? [description] : ["Description à venir."],
-    tags: documentTags.length > 0 ? documentTags : legacyTags,
-    publishedAt: website.data.date || website.first_publication_date,
-    applicationsCount: 0,
-  };
-}
-
 export default async function HomepagePage() {
-  const client = createClient();
-  const websites = await client.getAllByType("offre");
-  const offers = (websites as unknown as OffreDocumentLike[])
-    .map(mapWebsiteToOffer)
-    .filter((offer) => offer.tags.some((tag) => tag.toLowerCase() === "firstpage"))
-    .slice(0, 6);
+  const websites = await createClient().getAllByType("offre", {
+      filters: [prismic.filter.at("document.tags", ["FirstPage"])],
+ 
+});
+  const offers: JobOffer[] = websites.map((website) => {
+    const description = website.data.description
+      .map((block) => ("text" in block && typeof block.text === "string" ? block.text : ""))
+      .join(" ")
+      .trim();
+
+    return {
+      uid: website.uid ?? website.id,
+      slug: website.uid ?? website.id,
+      title: website.data.title?.trim() || "Offre",
+      excerpt: description || "Description à venir.",
+      content: description ? [description] : ["Description à venir."],
+      tags: website.tags ?? [],
+      publishedAt: website.data.date || website.first_publication_date,
+      applicationsCount: 0,
+    };
+  });
 
   return (
     <main className="jobs-page">

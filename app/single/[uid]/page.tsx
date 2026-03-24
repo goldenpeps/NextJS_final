@@ -1,4 +1,3 @@
-import * as prismic from "@prismicio/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import JobsHeader from "@/components/ui/JobsHeader";
@@ -10,19 +9,6 @@ type JobOffer = {
 	content: string[];
 	tags: string[];
 	publishedAt: string;
-};
-
-type OffreDocumentLike = {
-	uid: string | null;
-	id: string;
-	tags?: string[];
-	first_publication_date: string;
-	data: {
-		title?: string | null;
-		date?: string | null;
-		description?: unknown;
-		tag?: unknown;
-	};
 };
 
 type SingleOfferPageProps = {
@@ -37,43 +23,6 @@ function toTagSlug(tag: string): string {
 		.replace(/[^a-z0-9-]/g, "");
 }
 
-function parseTagField(tagField: unknown): string[] {
-	if (Array.isArray(tagField)) {
-		return [...new Set(tagField.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean))];
-	}
-
-	if (typeof tagField === "string") {
-		return [...new Set(tagField
-			.split(/[;,|\n]/)
-			.map((tag) => tag.trim().toLowerCase())
-			.filter(Boolean))];
-	}
-
-	const asText = prismic.asText(tagField as prismic.RichTextField) ?? "";
-	return [...new Set(asText
-		.split(/[;,|\n]/)
-		.map((tag) => tag.trim().toLowerCase())
-		.filter(Boolean))];
-}
-
-function mapWebsiteToOffer(website: OffreDocumentLike): JobOffer {
-	const description = prismic.asText(website.data.description as prismic.RichTextField) ?? "";
-	const content = description
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean);
-	const documentTags = parseTagField(website.tags);
-	const legacyTags = parseTagField(website.data.tag);
-
-	return {
-		uid: website.uid || website.id,
-		title: website.data.title?.trim() || "Offre",
-		content: content.length > 0 ? content : ["Description à venir."],
-		tags: documentTags.length > 0 ? documentTags : legacyTags,
-		publishedAt: website.data.date || website.first_publication_date,
-	};
-}
-
 function formatDate(value: string) {
   const date = new Date(value);
 
@@ -86,9 +35,20 @@ function formatDate(value: string) {
 
 export default async function SingleOfferPage({ params }: SingleOfferPageProps) {
   const { uid } = await params;
-  const client = createClient();
-  const websites = await client.getAllByType("offre");
-  const offers = (websites as unknown as OffreDocumentLike[]).map(mapWebsiteToOffer);
+	const websites = await createClient().getAllByType("offre");
+	const offers: JobOffer[] = websites.map((website) => {
+		const content = website.data.description
+			.map((block) => ("text" in block && typeof block.text === "string" ? block.text.trim() : ""))
+			.filter(Boolean);
+
+		return {
+			uid: website.uid ?? website.id,
+			title: website.data.title?.trim() || "Offre",
+			content: content.length > 0 ? content : ["Description à venir."],
+			tags: website.tags ?? [],
+			publishedAt: website.data.date || website.first_publication_date,
+		};
+	});
   const offer = offers.find((item) => item.uid === uid);
 
   if (!offer) {
