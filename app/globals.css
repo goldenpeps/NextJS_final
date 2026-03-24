@@ -82,8 +82,22 @@ a {
 }
 
 .jobs-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: white;
   font-size: 0.8rem;
+}
+
+.jobs-profile__pinned {
+  min-width: 1.1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.18rem 0.32rem;
+  border: 1px solid #6ca0ff;
+  border-radius: 999px;
+  color: #d8e7ff;
 }
 
 .jobs-hero {
@@ -190,8 +204,16 @@ a {
 }
 
 .job-card__save {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
   font-size: 0.9rem;
   color: var(--primary);
+}
+
+.job-card__save--active {
+  color: var(--primary-accent);
 }
 
 .job-card__date {

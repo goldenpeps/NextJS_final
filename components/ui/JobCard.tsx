@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useOffreStore } from "@/store/offre.store";
 
 export type JobOffer = {
   uid: string;
@@ -35,15 +39,30 @@ function toTagSlug(tag: string): string {
 }
 
 export default function JobCard({ offer }: JobCardProps) {
+  const togglePinned = useOffreStore((state) => state.togglePinned);
+  const isPinned = useOffreStore((state) => state.isPinned(offer.uid));
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const pinned = isMounted ? isPinned : false;
+
   return (
     <article className="job-card">
       <header className="job-card__head">
         <h2>
           <Link href={`/single/${offer.uid}`}>{offer.title}</Link>
         </h2>
-        <span className="job-card__save" aria-hidden>
+        <button
+          type="button"
+          className={`job-card__save ${pinned ? "job-card__save--active" : ""}`}
+          aria-label={pinned ? "Retirer des epingles" : "Epingler cette annonce"}
+          onClick={() => togglePinned(offer)}
+        >
           ◫
-        </span>
+        </button>
       </header>
 
       <p className="job-card__date">◷ {formatDate(offer.publishedAt)}</p>
