@@ -1,0 +1,58 @@
+{
+  "id": "offre_emploie",
+  "type": "SharedSlice",
+  "name": "OffreEmploie",
+  "description": "OffreEmploie",
+  "variations": [
+    {
+      "id": "default",
+      "name": "Default",
+      "docURL": "...",
+      "version": "initial",
+      "description": "Default",
+      "imageUrl": "",
+      "primary": {
+        "title": {
+          "type": "Text",
+          "config": {
+            "label": "title",
+            "placeholder": "titre"
+          }
+        },
+        "date": {
+          "type": "Date",
+          "config": {
+            "label": "date",
+            "placeholder": "date"
+          }
+        },
+        "description": {
+          "type": "StructuredText",
+          "config": {
+            "label": "description",
+            "placeholder": "description",
+            "allowTargetBlank": true,
+            "multi": "paragraph,preformatted,heading1,heading2,heading3,heading4,heading5,heading6,strong,em,hyperlink,image,embed,list-item,o-list-item,rtl"
+          }
+        },
+        "tag": {
+          "type": "Embed",
+          "config": {
+            "label": "tag",
+            "placeholder": ""
+          }
+        },
+        "pinned": {
+          "type": "Boolean",
+          "config": {
+            "label": "pinned",
+            "placeholder_false": "false",
+            "placeholder_true": "true",
+            "default_value": false
+          }
+        }
+      },
+      "items": {}
+    }
+  ]
+}
